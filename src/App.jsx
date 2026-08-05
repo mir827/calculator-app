@@ -1,121 +1,178 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [display, setDisplay] = useState('0')
+  const [firstOperand, setFirstOperand] = useState(null)
+  const [operator, setOperator] = useState(null)
+  const [waitingForSecondOperand, setWaitingForSecondOperand] = useState(false)
+
+  const inputDigit = (digit) => {
+    if (waitingForSecondOperand) {
+      setDisplay(String(digit))
+      setWaitingForSecondOperand(false)
+    } else {
+      setDisplay(display === '0' ? String(digit) : display + digit)
+    }
+  }
+
+  const inputDecimal = () => {
+    if (waitingForSecondOperand) {
+      setDisplay('0.')
+      setWaitingForSecondOperand(false)
+    } else if (display.indexOf('.') === -1) {
+      setDisplay(display + '.')
+    }
+  }
+
+  const clearDisplay = () => {
+    setDisplay('0')
+    setFirstOperand(null)
+    setOperator(null)
+    setWaitingForSecondOperand(false)
+  }
+
+  const performOperation = (nextOperator) => {
+    const { value: currentValue, sign } = display
+    const inputValue = parseFloat(currentValue)
+
+    if (firstOperand === null) {
+      setFirstOperand(inputValue)
+    } else if (operator) {
+      const currentValue = firstOperand || 0
+      let newValue = currentValue
+      switch (operator) {
+        case '+':
+          newValue = currentValue + inputValue
+          break
+        case '-':
+          newValue = currentValue - inputValue
+          break
+        case '×':
+          newValue = currentValue * inputValue
+          break
+        case '÷':
+          newValue = currentValue / inputValue
+          break
+        default:
+          break
+      }
+      setDisplay(String(newValue))
+      setFirstOperand(newValue)
+    }
+
+    setWaitingForSecondOperand(true)
+    setOperator(nextOperator)
+  }
+
+  const calculate = () => {
+    if (!operator || firstOperand === null) return
+    const inputValue = parseFloat(display)
+    const currentValue = firstOperand || 0
+    let newValue = currentValue
+    switch (operator) {
+      case '+':
+        newValue = currentValue + inputValue
+        break
+      case '-':
+        newValue = currentValue - inputValue
+        break
+      case '×':
+        newValue = currentValue * inputValue
+        break
+      case '÷':
+        newValue = currentValue / inputValue
+        break
+      default:
+        break
+    }
+    setDisplay(String(newValue))
+    setFirstOperand(null)
+    setWaitingForSecondOperand(true)
+    setOperator(null)
+  }
+
+  const handleEquals = () => {
+    calculate()
+    setWaitingForSecondOperand(true)
+    setOperator(null)
+    setFirstOperand(null)
+  }
+
+  const handleClear = () => {
+    clearDisplay()
+  }
+
+  const handleToggleSign = () => {
+    setDisplay(String(parseFloat(display) * -1))
+  }
+
+  const handlePercent = () => {
+    setDisplay(String(parseFloat(display) / 100))
+  }
+
+  const handleDecimal = () => {
+    inputDecimal()
+  }
+
+  const buttonStyle = {
+    flex: '1 0 40px',
+    height: '100%',
+    fontSize: '24px',
+    cursor: 'pointer',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    backgroundColor: '#f9f9f9',
+    transition: 'background-color 0.2s',
+  }
+
+  const buttonStyleActive = {
+    ...buttonStyle,
+    backgroundColor: '#e0e0e0',
+  }
+
+  const buttonOperatorStyle = {
+    ...buttonStyle,
+    backgroundColor: '#ff9500',
+    color: 'white',
+  }
+
+  const buttonACStyle = {
+    ...buttonStyle,
+    backgroundColor: '#ff3b30',
+    color: 'white',
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="calculator">
+      <div className="display-container">
+        <div className="display">
+          {display.length > 9 ? display.slice(-9) : display}
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      </div>
+      <div className="buttons">
+        <button onClick={handleClear} className={buttonACStyle}>AC</button>
+        <button onClick={handleToggleSign} className={buttonStyle}>+/-</button>
+        <button onClick={handlePercent} className={buttonStyle}>%</button>
+        <button onClick={() => performOperation('÷')} className={buttonOperatorStyle}>÷</button>
+        <button onClick={() => inputDigit(7)} className={buttonStyle}>7</button>
+        <button onClick={() => inputDigit(8)} className={buttonStyle}>8</button>
+        <button onClick={() => inputDigit(9)} className={buttonStyle}>9</button>
+        <button onClick={() => performOperation('×')} className={buttonOperatorStyle}>×</button>
+        <button onClick={() => inputDigit(4)} className={buttonStyle}>4</button>
+        <button onClick={() => inputDigit(5)} className={buttonStyle}>5</button>
+        <button onClick={() => inputDigit(6)} className={buttonStyle}>6</button>
+        <button onClick={() => performOperation('-')} className={buttonOperatorStyle}>-</button>
+        <button onClick={() => inputDigit(1)} className={buttonStyle}>1</button>
+        <button onClick={() => inputDigit(2)} className={buttonStyle}>2</button>
+        <button onClick={() => inputDigit(3)} className={buttonStyle}>3</button>
+        <button onClick={() => performOperation('+')} className={buttonOperatorStyle}>+</button>
+        <button onClick={() => inputDigit(0)} className={buttonStyle}>0</button>
+        <button onClick={handleDecimal} className={buttonStyle}>.</button>
+        <button onClick={() => inputDigit(0)} className={buttonStyle}>00</button>
+        <button onClick={handleEquals} className={buttonOperatorStyle}>=</button>
+      </div>
+    </div>
   )
 }
 
