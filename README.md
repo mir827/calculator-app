@@ -1,16 +1,45 @@
-# React + Vite
+# Calculator App
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A polished React/Vite calculator with mouse and keyboard input, chained operations, decimal math, sign toggle, percent, backspace, and safe divide-by-zero handling.
 
-Currently, two official plugins are available:
+## Local Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Install dependencies:
 
-## React Compiler
+```bash
+npm ci
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Start the Vite dev server:
 
-## Expanding the Oxlint configuration
+```bash
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Run lint checks:
+
+```bash
+npm run lint
+```
+
+Build the production bundle:
+
+```bash
+npm run build
+```
+
+## GitHub Pages
+
+The Vite base path is configured for the repository path:
+
+```txt
+/calculator-app/
+```
+
+The included GitHub Actions workflow builds and deploys `dist` to GitHub Pages on every push to `main`.
+
+Expected Pages URL:
+
+```txt
+https://mir827.github.io/calculator-app/
+```
