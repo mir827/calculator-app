@@ -82,10 +82,10 @@ function calculatorReducer(state, action) {
       const result = calculate(state.storedValue, state.operator, rightValue)
       if (result.error) return withCalculationError(result.error)
       const output = formatNumber(result.value)
-      return { ...initialState, displayValue: output, waitingForOperand: true, lastCalculation: { id: crypto.randomUUID(), expression: `${formatNumber(state.storedValue)} ${OPERATORS[state.operator].symbol} ${formatNumber(rightValue)}`, result: output, timestamp: Date.now() } }
+      return { ...initialState, displayValue: output, waitingForOperand: true, lastCalculation: { id: crypto.randomUUID(), expression: `${formatNumber(state.storedValue)} ${OPERATORS[state.operator].symbol} ${formatNumber(rightValue)}`, result: output, leftValue: state.storedValue, operator: state.operator, rightValue, timestamp: Date.now() } }
     }
     case 'clear': return initialState
-    case 'restore': return { ...initialState, displayValue: action.value, waitingForOperand: true }
+    case 'restore': return action.operator ? { ...initialState, displayValue: formatNumber(action.rightValue), storedValue: action.leftValue, operator: action.operator, waitingForOperand: false } : { ...initialState, displayValue: action.value, waitingForOperand: true }
     case 'backspace': {
       if (state.error) return initialState
       if (state.waitingForOperand) return state
@@ -114,6 +114,7 @@ function App() {
   const [state, dispatch] = useReducer(calculatorReducer, initialState)
   const [history, setHistory] = useState(loadHistory)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [copyStatus, setCopyStatus] = useState('')
   const activeOperator = state.operator ? OPERATORS[state.operator] : null
   const expressionValue = activeOperator && state.storedValue !== null ? `${formatNumber(state.storedValue)} ${activeOperator.symbol}` : ''
   const displayClassName = ['calculator__display', state.displayValue.length > 12 ? 'calculator__display--compact' : '', state.error ? 'calculator__display--error' : ''].filter(Boolean).join(' ')
@@ -140,17 +141,36 @@ function App() {
   }, [])
 
   function clearHistory() { localStorage.removeItem(HISTORY_KEY); setHistory([]) }
-  function selectHistory(item) { dispatch({ type: 'restore', value: item.result }); setHistoryOpen(false) }
+  function selectHistory(item) { dispatch({ type: 'restore', value: item.result, leftValue: item.leftValue, operator: item.operator, rightValue: item.rightValue }); setHistoryOpen(false) }
+  async function copyResult() {
+    try {
+      await navigator.clipboard.writeText(state.displayValue)
+      setCopyStatus('Copied')
+    } catch {
+      const textArea = document.createElement('textarea')
+      textArea.value = state.displayValue
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.select()
+      const copied = document.execCommand('copy')
+      textArea.remove()
+      setCopyStatus(copied ? 'Copied' : 'Copy failed')
+    }
+    window.setTimeout(() => setCopyStatus(''), 1600)
+  }
 
   return <main className="calculator-page">
     <section className="calculator" aria-label="Calculator">
       <div className="calculator__header">
         <h1>Calculator</h1>
         <div className="calculator__header-actions">
+          <button type="button" className="calculator__history-toggle" onClick={copyResult}>Copy</button>
           <button type="button" className="calculator__history-toggle" onClick={() => setHistoryOpen((open) => !open)} aria-expanded={historyOpen} aria-controls="calculation-history">History{history.length ? ` (${history.length})` : ''}</button>
           <div className="calculator__status" aria-hidden="true">{activeOperator?.label ?? 'Ready'}</div>
         </div>
       </div>
+      <p className="calculator__copy-status" aria-live="polite">{copyStatus}</p>
       <div className="calculator__screen">
         <div className="calculator__expression" aria-hidden="true">{expressionValue || '\u00a0'}</div>
         <output className={displayClassName} aria-live="polite" aria-atomic="true">{state.displayValue}</output>

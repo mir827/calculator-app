@@ -225,3 +225,5 @@
 .calculator__history li button strong { color: #f8fafc; font-family: var(--mono); }
 .calculator__history time { grid-column: 1 / -1; margin-top: 4px; color: #94a3b8; font-size: .7rem; }
 .calculator__history p { margin: 0; padding: 18px 12px; color: #94a3b8; font-size: .88rem; }
+
+.calculator__copy-status { min-height: 1rem; margin: -4px 0 7px; color: #a7f3d0; font-size: .72rem; font-weight: 700; text-align: right; }
