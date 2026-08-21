@@ -1,7 +1,9 @@
-import { useEffect, useReducer } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import './App.css'
 
 const MAX_INPUT_DIGITS = 16
+const HISTORY_KEY = 'calculator_history_v2'
+const MAX_HISTORY_ITEMS = 50
 
 const OPERATORS = {
   '+': { symbol: '+', label: 'Add' },
@@ -32,338 +34,139 @@ const BUTTONS = [
   { label: 'Equals', text: '=', type: 'equals', className: 'equals', keyHint: 'Enter' },
 ]
 
-const initialState = {
-  displayValue: '0',
-  storedValue: null,
-  operator: null,
-  waitingForOperand: false,
-  error: '',
-}
+const initialState = { displayValue: '0', storedValue: null, operator: null, waitingForOperand: false, error: '', lastCalculation: null }
 
-function countDigits(value) {
-  return value.replace(/[-.]/g, '').length
-}
-
+function countDigits(value) { return value.replace(/[-.]/g, '').length }
 function formatNumber(value) {
-  if (!Number.isFinite(value)) {
-    return 'Error'
-  }
-
+  if (!Number.isFinite(value)) return 'Error'
   const normalized = Object.is(value, -0) ? 0 : Number.parseFloat(value.toPrecision(12))
   const absoluteValue = Math.abs(normalized)
-
-  if (absoluteValue !== 0 && (absoluteValue >= 1_000_000_000_000 || absoluteValue < 0.000001)) {
-    return normalized.toExponential(8).replace(/\.?0+e/, 'e')
-  }
-
-  return normalized.toLocaleString('en-US', {
-    maximumFractionDigits: 10,
-    useGrouping: false,
-  })
+  if (absoluteValue !== 0 && (absoluteValue >= 1_000_000_000_000 || absoluteValue < 0.000001)) return normalized.toExponential(8).replace(/\.?0+e/, 'e')
+  return normalized.toLocaleString('en-US', { maximumFractionDigits: 10, useGrouping: false })
 }
-
 function calculate(leftValue, operator, rightValue) {
-  if (operator === '/' && rightValue === 0) {
-    return { error: 'Cannot divide by zero' }
-  }
-
-  const operations = {
-    '+': leftValue + rightValue,
-    '-': leftValue - rightValue,
-    '*': leftValue * rightValue,
-    '/': leftValue / rightValue,
-  }
-
-  return { value: operations[operator] }
+  if (operator === '/' && rightValue === 0) return { error: 'Cannot divide by zero' }
+  return { value: ({ '+': leftValue + rightValue, '-': leftValue - rightValue, '*': leftValue * rightValue, '/': leftValue / rightValue })[operator] }
 }
-
-function withCalculationError(message) {
-  return {
-    ...initialState,
-    displayValue: message,
-    error: message,
-  }
-}
-
+function withCalculationError(message) { return { ...initialState, displayValue: message, error: message } }
 function inputDigit(state, digit) {
-  if (state.error) {
-    return { ...initialState, displayValue: digit }
-  }
-
-  if (state.waitingForOperand) {
-    return { ...state, displayValue: digit, waitingForOperand: false }
-  }
-
-  if (countDigits(state.displayValue) >= MAX_INPUT_DIGITS) {
-    return state
-  }
-
-  if (state.displayValue === '0') {
-    return { ...state, displayValue: digit }
-  }
-
-  if (state.displayValue === '-0') {
-    return { ...state, displayValue: `-${digit}` }
-  }
-
+  if (state.error) return { ...initialState, displayValue: digit }
+  if (state.waitingForOperand) return { ...state, displayValue: digit, waitingForOperand: false }
+  if (countDigits(state.displayValue) >= MAX_INPUT_DIGITS) return state
+  if (state.displayValue === '0') return { ...state, displayValue: digit }
+  if (state.displayValue === '-0') return { ...state, displayValue: `-${digit}` }
   return { ...state, displayValue: `${state.displayValue}${digit}` }
 }
-
 function inputDecimal(state) {
-  if (state.error) {
-    return { ...initialState, displayValue: '0.' }
-  }
-
-  if (state.waitingForOperand) {
-    return { ...state, displayValue: '0.', waitingForOperand: false }
-  }
-
-  if (state.displayValue.includes('.')) {
-    return state
-  }
-
-  return { ...state, displayValue: `${state.displayValue}.` }
+  if (state.error) return { ...initialState, displayValue: '0.' }
+  if (state.waitingForOperand) return { ...state, displayValue: '0.', waitingForOperand: false }
+  return state.displayValue.includes('.') ? state : { ...state, displayValue: `${state.displayValue}.` }
 }
-
 function chooseOperator(state, nextOperator) {
-  if (state.error) {
-    return state
-  }
-
-  if (state.operator && state.waitingForOperand) {
-    return { ...state, operator: nextOperator }
-  }
-
+  if (state.error) return state
+  if (state.operator && state.waitingForOperand) return { ...state, operator: nextOperator }
   const inputValue = Number(state.displayValue)
-
-  if (state.storedValue === null) {
-    return {
-      ...state,
-      storedValue: inputValue,
-      operator: nextOperator,
-      waitingForOperand: true,
-    }
-  }
-
+  if (state.storedValue === null) return { ...state, storedValue: inputValue, operator: nextOperator, waitingForOperand: true }
   const result = calculate(state.storedValue, state.operator, inputValue)
-
-  if (result.error) {
-    return withCalculationError(result.error)
-  }
-
-  return {
-    ...state,
-    displayValue: formatNumber(result.value),
-    storedValue: result.value,
-    operator: nextOperator,
-    waitingForOperand: true,
-  }
+  if (result.error) return withCalculationError(result.error)
+  return { ...state, displayValue: formatNumber(result.value), storedValue: result.value, operator: nextOperator, waitingForOperand: true }
 }
-
 function calculatorReducer(state, action) {
   switch (action.type) {
-    case 'digit':
-      return inputDigit(state, action.digit)
-
-    case 'decimal':
-      return inputDecimal(state)
-
-    case 'operator':
-      return chooseOperator(state, action.operator)
-
+    case 'digit': return inputDigit(state, action.digit)
+    case 'decimal': return inputDecimal(state)
+    case 'operator': return chooseOperator(state, action.operator)
     case 'equals': {
-      if (state.error || !state.operator || state.storedValue === null) {
-        return state
-      }
-
+      if (state.error || !state.operator || state.storedValue === null) return state
       const rightValue = state.waitingForOperand ? state.storedValue : Number(state.displayValue)
       const result = calculate(state.storedValue, state.operator, rightValue)
-
-      if (result.error) {
-        return withCalculationError(result.error)
-      }
-
-      return {
-        ...initialState,
-        displayValue: formatNumber(result.value),
-        waitingForOperand: true,
-      }
+      if (result.error) return withCalculationError(result.error)
+      const output = formatNumber(result.value)
+      return { ...initialState, displayValue: output, waitingForOperand: true, lastCalculation: { id: crypto.randomUUID(), expression: `${formatNumber(state.storedValue)} ${OPERATORS[state.operator].symbol} ${formatNumber(rightValue)}`, result: output, timestamp: Date.now() } }
     }
-
-    case 'clear':
-      return initialState
-
+    case 'clear': return initialState
+    case 'restore': return { ...initialState, displayValue: action.value, waitingForOperand: true }
     case 'backspace': {
-      if (state.error) {
-        return initialState
-      }
-
-      if (state.waitingForOperand) {
-        return state
-      }
-
-      if (state.displayValue.length <= 1 || /^-\d$/.test(state.displayValue)) {
-        return { ...state, displayValue: '0' }
-      }
-
+      if (state.error) return initialState
+      if (state.waitingForOperand) return state
+      if (state.displayValue.length <= 1 || /^-\d$/.test(state.displayValue)) return { ...state, displayValue: '0' }
       return { ...state, displayValue: state.displayValue.slice(0, -1) }
     }
-
-    case 'toggleSign': {
-      if (state.error || state.displayValue === '0') {
-        return state.error ? initialState : state
-      }
-
-      return {
-        ...state,
-        displayValue: state.displayValue.startsWith('-')
-          ? state.displayValue.slice(1)
-          : `-${state.displayValue}`,
-        waitingForOperand: false,
-      }
-    }
-
-    case 'percent': {
-      if (state.error) {
-        return initialState
-      }
-
-      return {
-        ...state,
-        displayValue: formatNumber(Number(state.displayValue) / 100),
-        waitingForOperand: false,
-      }
-    }
-
-    default:
-      return state
+    case 'toggleSign': return state.error ? initialState : state.displayValue === '0' ? state : { ...state, displayValue: state.displayValue.startsWith('-') ? state.displayValue.slice(1) : `-${state.displayValue}`, waitingForOperand: false }
+    case 'percent': return state.error ? initialState : { ...state, displayValue: formatNumber(Number(state.displayValue) / 100), waitingForOperand: false }
+    default: return state
   }
 }
-
-function getButtonAction(button) {
-  if (button.type === 'digit') {
-    return { type: 'digit', digit: button.digit }
-  }
-
-  if (button.type === 'operator') {
-    return { type: 'operator', operator: button.operator }
-  }
-
-  return { type: button.type }
-}
-
+function getButtonAction(button) { return button.type === 'digit' ? { type: 'digit', digit: button.digit } : button.type === 'operator' ? { type: 'operator', operator: button.operator } : { type: button.type } }
 function getKeyboardAction(key) {
-  if (/^\d$/.test(key)) {
-    return { type: 'digit', digit: key }
-  }
-
-  if (key === '.') {
-    return { type: 'decimal' }
-  }
-
-  if (key === '+' || key === '-' || key === '*' || key === '/') {
-    return { type: 'operator', operator: key }
-  }
-
-  if (key === 'Enter' || key === '=') {
-    return { type: 'equals' }
-  }
-
-  if (key === 'Escape') {
-    return { type: 'clear' }
-  }
-
-  if (key === 'Backspace') {
-    return { type: 'backspace' }
-  }
-
-  if (key === '%') {
-    return { type: 'percent' }
-  }
-
+  if (/^\d$/.test(key)) return { type: 'digit', digit: key }
+  if (key === '.') return { type: 'decimal' }
+  if ('+-*/'.includes(key)) return { type: 'operator', operator: key }
+  if (key === 'Enter' || key === '=') return { type: 'equals' }
+  if (key === 'Escape') return { type: 'clear' }
+  if (key === 'Backspace') return { type: 'backspace' }
+  if (key === '%') return { type: 'percent' }
   return null
 }
+function loadHistory() { try { const saved = JSON.parse(localStorage.getItem(HISTORY_KEY)); return Array.isArray(saved) ? saved.slice(0, MAX_HISTORY_ITEMS) : [] } catch { return [] } }
 
 function App() {
   const [state, dispatch] = useReducer(calculatorReducer, initialState)
+  const [history, setHistory] = useState(loadHistory)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const activeOperator = state.operator ? OPERATORS[state.operator] : null
-  const expressionValue =
-    activeOperator && state.storedValue !== null
-      ? `${formatNumber(state.storedValue)} ${activeOperator.symbol}`
-      : ''
-  const displayClassName = [
-    'calculator__display',
-    state.displayValue.length > 12 ? 'calculator__display--compact' : '',
-    state.error ? 'calculator__display--error' : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
+  const expressionValue = activeOperator && state.storedValue !== null ? `${formatNumber(state.storedValue)} ${activeOperator.symbol}` : ''
+  const displayClassName = ['calculator__display', state.displayValue.length > 12 ? 'calculator__display--compact' : '', state.error ? 'calculator__display--error' : ''].filter(Boolean).join(' ')
+
+  useEffect(() => {
+    if (!state.lastCalculation) return
+    setHistory((current) => {
+      const next = [state.lastCalculation, ...current].slice(0, MAX_HISTORY_ITEMS)
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [state.lastCalculation])
 
   useEffect(() => {
     function handleKeyDown(event) {
-      if ((event.key === 'Enter' || event.key === ' ') && event.target?.tagName === 'BUTTON') {
-        return
-      }
-
+      if ((event.key === 'Enter' || event.key === ' ') && event.target?.tagName === 'BUTTON') return
       const action = getKeyboardAction(event.key)
-
-      if (!action) {
-        return
-      }
-
+      if (!action) return
       event.preventDefault()
       dispatch(action)
     }
-
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  return (
-    <main className="calculator-page">
-      <section className="calculator" aria-label="Calculator">
-        <div className="calculator__header">
-          <h1>Calculator</h1>
-          <div className="calculator__status" aria-hidden="true">
-            {activeOperator?.label ?? 'Ready'}
-          </div>
-        </div>
+  function clearHistory() { localStorage.removeItem(HISTORY_KEY); setHistory([]) }
+  function selectHistory(item) { dispatch({ type: 'restore', value: item.result }); setHistoryOpen(false) }
 
-        <div className="calculator__screen">
-          <div className="calculator__expression" aria-hidden="true">
-            {expressionValue || '\u00a0'}
-          </div>
-          <output className={displayClassName} aria-live="polite" aria-atomic="true">
-            {state.displayValue}
-          </output>
+  return <main className="calculator-page">
+    <section className="calculator" aria-label="Calculator">
+      <div className="calculator__header">
+        <h1>Calculator</h1>
+        <div className="calculator__header-actions">
+          <button type="button" className="calculator__history-toggle" onClick={() => setHistoryOpen((open) => !open)} aria-expanded={historyOpen} aria-controls="calculation-history">History{history.length ? ` (${history.length})` : ''}</button>
+          <div className="calculator__status" aria-hidden="true">{activeOperator?.label ?? 'Ready'}</div>
         </div>
-
-        <div className="calculator__keypad">
-          {BUTTONS.map((button) => {
-            const isActiveOperator =
-              button.type === 'operator' &&
-              button.operator === state.operator &&
-              state.waitingForOperand
-
-            return (
-              <button
-                type="button"
-                key={button.label}
-                className={`calculator__button calculator__button--${button.className}${
-                  isActiveOperator ? ' calculator__button--active' : ''
-                }${button.wide ? ' calculator__button--wide' : ''}`}
-                aria-label={button.label}
-                aria-keyshortcuts={button.keyHint}
-                onClick={() => dispatch(getButtonAction(button))}
-              >
-                {button.text}
-              </button>
-            )
-          })}
-        </div>
-      </section>
-    </main>
-  )
+      </div>
+      <div className="calculator__screen">
+        <div className="calculator__expression" aria-hidden="true">{expressionValue || '\u00a0'}</div>
+        <output className={displayClassName} aria-live="polite" aria-atomic="true">{state.displayValue}</output>
+      </div>
+      {historyOpen && <aside id="calculation-history" className="calculator__history" aria-label="Calculation history">
+        <div className="calculator__history-header"><strong>History</strong>{history.length > 0 && <button type="button" onClick={clearHistory}>Clear all</button>}</div>
+        {history.length ? <ul>{history.map((item) => <li key={item.id}><button type="button" onClick={() => selectHistory(item)}><span>{item.expression}</span><strong>= {item.result}</strong><time dateTime={new Date(item.timestamp).toISOString()}>{new Date(item.timestamp).toLocaleString()}</time></button></li>)}</ul> : <p>No calculations yet.</p>}
+      </aside>}
+      <div className="calculator__keypad">
+        {BUTTONS.map((button) => {
+          const isActiveOperator = button.type === 'operator' && button.operator === state.operator && state.waitingForOperand
+          return <button type="button" key={button.label} className={`calculator__button calculator__button--${button.className}${isActiveOperator ? ' calculator__button--active' : ''}${button.wide ? ' calculator__button--wide' : ''}`} aria-label={button.label} aria-keyshortcuts={button.keyHint} onClick={() => dispatch(getButtonAction(button))}>{button.text}</button>
+        })}
+      </div>
+    </section>
+  </main>
 }
 
 export default App
