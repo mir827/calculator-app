@@ -15,7 +15,9 @@ const OPERATORS = {
 const BUTTONS = [
   { label: 'All clear', text: 'AC', type: 'clear', className: 'function', keyHint: 'Escape' },
   { label: 'Toggle sign', text: '+/−', type: 'toggleSign', className: 'function' },
-  { label: 'Percent', text: '%', type: 'percent', className: 'function', keyHint: '%' },
+  { label: 'Pi constant', text: 'π', type: 'constant', className: 'function', keyHint: 'p' },
+  { label: 'E constant', text: 'e', type: 'constant', className: 'function', keyHint: 'e' },
+  { label: 'Reciprocal', text: '1/x', type: 'reciprocal', className: 'function', keyHint: 'r' },
   { label: 'Divide', text: '÷', type: 'operator', operator: '/', className: 'operator', keyHint: '/' },
   { label: 'Seven', text: '7', type: 'digit', digit: '7', className: 'number', keyHint: '7' },
   { label: 'Eight', text: '8', type: 'digit', digit: '8', className: 'number', keyHint: '8' },
@@ -32,6 +34,9 @@ const BUTTONS = [
   { label: 'Zero', text: '0', type: 'digit', digit: '0', className: 'number', keyHint: '0', wide: true },
   { label: 'Decimal point', text: '.', type: 'decimal', className: 'number', keyHint: '.' },
   { label: 'Equals', text: '=', type: 'equals', className: 'equals', keyHint: 'Enter' },
+  { label: 'Square', text: 'x²', type: 'square', className: 'function', keyHint: 'x' },
+  { label: 'Square root', text: '√', type: 'squareRoot', className: 'function', keyHint: '√' },
+  { label: 'Percent', text: '%', type: 'percent', className: 'function', keyHint: '%' },
 ]
 
 const initialState = { displayValue: '0', storedValue: null, operator: null, waitingForOperand: false, error: '', lastCalculation: null }
@@ -62,6 +67,28 @@ function inputDecimal(state) {
   if (state.waitingForOperand) return { ...state, displayValue: '0.', waitingForOperand: false }
   return state.displayValue.includes('.') ? state : { ...state, displayValue: `${state.displayValue}.` }
 }
+function inputConstant(state, value) {
+  if (state.error) return { ...initialState, displayValue: value, waitingForOperand: false }
+  return { ...state, displayValue: value, waitingForOperand: false }
+}
+function inputReciprocal(state) {
+  if (state.error) return { ...initialState, displayValue: 'Error' }
+  const value = Number(state.displayValue)
+  if (!Number.isFinite(value) || value === 0) return { ...initialState, displayValue: 'Error' }
+  return { ...state, displayValue: formatNumber(1 / value), waitingForOperand: false }
+}
+function inputSquare(state) {
+  if (state.error) return { ...initialState, displayValue: 'Error' }
+  const value = Number(state.displayValue)
+  if (!Number.isFinite(value)) return { ...initialState, displayValue: 'Error' }
+  return { ...state, displayValue: formatNumber(value * value), waitingForOperand: false }
+}
+function inputSquareRoot(state) {
+  if (state.error) return { ...initialState, displayValue: 'Error' }
+  const value = Number(state.displayValue)
+  if (value < 0) return { ...initialState, displayValue: 'Error' }
+  return { ...state, displayValue: formatNumber(Math.sqrt(value)), waitingForOperand: false }
+}
 function chooseOperator(state, nextOperator) {
   if (state.error) return state
   if (state.operator && state.waitingForOperand) return { ...state, operator: nextOperator }
@@ -75,6 +102,10 @@ function calculatorReducer(state, action) {
   switch (action.type) {
     case 'digit': return inputDigit(state, action.digit)
     case 'decimal': return inputDecimal(state)
+    case 'constant': return inputConstant(state, action.value)
+    case 'reciprocal': return inputReciprocal(state)
+    case 'square': return inputSquare(state)
+    case 'squareRoot': return inputSquareRoot(state)
     case 'operator': return chooseOperator(state, action.operator)
     case 'equals': {
       if (state.error || !state.operator || state.storedValue === null) return state
@@ -97,7 +128,15 @@ function calculatorReducer(state, action) {
     default: return state
   }
 }
-function getButtonAction(button) { return button.type === 'digit' ? { type: 'digit', digit: button.digit } : button.type === 'operator' ? { type: 'operator', operator: button.operator } : { type: button.type } }
+function getButtonAction(button) {
+  if (button.type === 'digit') return { type: 'digit', digit: button.digit }
+  if (button.type === 'operator') return { type: 'operator', operator: button.operator }
+  if (button.type === 'constant') return { type: 'constant', value: button.value }
+  if (button.type === 'reciprocal') return { type: 'reciprocal' }
+  if (button.type === 'square') return { type: 'square' }
+  if (button.type === 'squareRoot') return { type: 'squareRoot' }
+  return { type: button.type }
+}
 function getKeyboardAction(key) {
   if (/^\d$/.test(key)) return { type: 'digit', digit: key }
   if (key === '.') return { type: 'decimal' }
