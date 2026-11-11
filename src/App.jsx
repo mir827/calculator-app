@@ -116,7 +116,6 @@ function App() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const activeOperator = state.operator ? OPERATORS[state.operator] : null
   const expressionValue = activeOperator && state.storedValue !== null ? `${formatNumber(state.storedValue)} ${activeOperator.symbol}` : ''
-  const displayClassName = ['calculator__display', state.displayValue.length > 12 ? 'calculator__display--compact' : '', state.error ? 'calculator__display--error' : ''].filter(Boolean).join(' ')
 
   useEffect(() => {
     if (!state.lastCalculation) return
@@ -142,31 +141,67 @@ function App() {
   function clearHistory() { localStorage.removeItem(HISTORY_KEY); setHistory([]) }
   function selectHistory(item) { dispatch({ type: 'restore', value: item.result }); setHistoryOpen(false) }
 
-  return <main className="calculator-page">
-    <section className="calculator" aria-label="Calculator">
-      <div className="calculator__header">
-        <h1>Calculator</h1>
-        <div className="calculator__header-actions">
-          <button type="button" className="calculator__history-toggle" onClick={() => setHistoryOpen((open) => !open)} aria-expanded={historyOpen} aria-controls="calculation-history">History{history.length ? ` (${history.length})` : ''}</button>
-          <div className="calculator__status" aria-hidden="true">{activeOperator?.label ?? 'Ready'}</div>
+  return (
+    <main className="calculator-page">
+      <section className="calculator" aria-label="Calculator">
+        <div className="calculator__header">
+          <h1>Calculator</h1>
+          <div className="calculator__header-actions">
+            <button type="button" className="calculator__history-toggle" onClick={() => setHistoryOpen((open) => !open)} aria-expanded={historyOpen} aria-controls="calculation-history">History{history.length ? ` (${history.length})` : ''}</button>
+            <div className="calculator__status" aria-hidden="true">{activeOperator?.label ?? 'Ready'}</div>
+          </div>
         </div>
-      </div>
-      <div className="calculator__screen">
-        <div className="calculator__expression" aria-hidden="true">{expressionValue || '\u00a0'}</div>
-        <output className={displayClassName} aria-live="polite" aria-atomic="true">{state.displayValue}</output>
-      </div>
-      {historyOpen && <aside id="calculation-history" className="calculator__history" aria-label="Calculation history">
-        <div className="calculator__history-header"><strong>History</strong>{history.length > 0 && <button type="button" onClick={clearHistory}>Clear all</button>}</div>
-        {history.length ? <ul>{history.map((item) => <li key={item.id}><button type="button" onClick={() => selectHistory(item)}><span>{item.expression}</span><strong>= {item.result}</strong><time dateTime={new Date(item.timestamp).toISOString()}>{new Date(item.timestamp).toLocaleString()}</time></button></li>)}</ul> : <p>No calculations yet.</p>}
-      </aside>}
-      <div className="calculator__keypad">
-        {BUTTONS.map((button) => {
-          const isActiveOperator = button.type === 'operator' && button.operator === state.operator && state.waitingForOperand
-          return <button type="button" key={button.label} className={`calculator__button calculator__button--${button.className}${isActiveOperator ? ' calculator__button--active' : ''}${button.wide ? ' calculator__button--wide' : ''}`} aria-label={button.label} aria-keyshortcuts={button.keyHint} onClick={() => dispatch(getButtonAction(button))}>{button.text}</button>
-        })}
-      </div>
-    </section>
-  </main>
+        <div className="calculator__screen">
+          <div className="calculator__expression" aria-hidden="true">{expressionValue || '\u00a0'}</div>
+          <output className={[displayClassName, isNewResult ? 'is-new' : ''].filter(Boolean).join(' ')} aria-live="polite" aria-atomic="true">{state.displayValue}</output>
+        </div>
+        {historyOpen && (
+          <aside id="calculation-history" className="calculator__history" aria-label="Calculation history">
+            <div className="calculator__history-header"><strong>History</strong>{history.length > 0 && <button type="button" onClick={clearHistory}>Clear all</button>}</div>
+            {history.length ? (
+              <ul>
+                {history.map((item) => (
+                  <li key={item.id}>
+                    <button type="button" onClick={() => selectHistory(item)}>
+                      <span>{item.expression}</span>
+                      <strong>= {item.result}</strong>
+                      <time dateTime={new Date(item.timestamp).toISOString()}>{new Date(item.timestamp).toLocaleString()}</time>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No calculations yet.</p>
+            )}
+          </aside>
+        )}
+        <div className="calculator__keypad">
+          {BUTTONS.map((button) => {
+            const isActiveOperator = button.type === 'operator' && button.operator === state.operator && state.waitingForOperand
+            return (
+              <button
+                type="button"
+                key={button.label}
+                className={`calculator__button calculator__button--${button.className}${isActiveOperator ? ' calculator__button--active' : ''}${button.wide ? ' calculator__button--wide' : ''}`}
+                aria-label={button.label}
+                aria-keyshortcuts={button.keyHint}
+                onClick={() => {
+                  dispatch(getButtonAction(button))
+                  buttonRef.current?.classList.add('is-pressed')
+                }}
+                ref={buttonRef}
+                onPointerDown={() => buttonRef.current?.classList.add('is-pressed')}
+                onPointerUp={() => buttonRef.current?.classList.remove('is-pressed')}
+                onPointerLeave={() => buttonRef.current?.classList.remove('is-pressed')}
+              >
+                {button.text}
+              </button>
+            )
+          })}
+        </div>
+      </section>
+    </main>
+  )
 }
 
 export default App
