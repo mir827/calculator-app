@@ -15,8 +15,8 @@ const OPERATORS = {
 const BUTTONS = [
   { label: 'All clear', text: 'AC', type: 'clear', className: 'function', keyHint: 'Escape' },
   { label: 'Toggle sign', text: '+/−', type: 'toggleSign', className: 'function' },
-  { label: 'Pi constant', text: 'π', type: 'constant', className: 'function', keyHint: 'p' },
-  { label: 'E constant', text: 'e', type: 'constant', className: 'function', keyHint: 'e' },
+  { label: 'Pi constant', text: 'π', value: 3.14159265358979, type: 'constant', className: 'function', keyHint: 'p' },
+  { label: 'E constant', text: 'e', value: 2.71828182845904, type: 'constant', className: 'function', keyHint: 'e' },
   { label: 'Reciprocal', text: '1/x', type: 'reciprocal', className: 'function', keyHint: 'r' },
   { label: 'Divide', text: '÷', type: 'operator', operator: '/', className: 'operator', keyHint: '/' },
   { label: 'Seven', text: '7', type: 'digit', digit: '7', className: 'number', keyHint: '7' },
